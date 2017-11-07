@@ -1,0 +1,12 @@
+---
+mysql2:
+  host: 'localhost'
+  port: 3306
+  username: ''
+  password: ''
+  database: 'phpbb'
+pg:
+  host: 'localhost'
+  dbname: 'discourse'
+  user: 'discourse'
+  password: ''

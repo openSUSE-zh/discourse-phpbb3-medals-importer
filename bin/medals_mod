@@ -1,0 +1,16 @@
+#!/usr/bin/env ruby
+
+$LOAD_PATH.push(File.expand_path(File.dirname(__FILE__) + '/../lib'))
+
+require 'medals_mod'
+
+config = ARGV[0] || "config"
+
+mysql = MedalsMod::DB.new(config).mysql2
+pg = MedalsMod::DB.new(config).pg
+
+data = MedalsMod::PHPBB.new(mysql).get
+
+mapped = MedalsMod::Map.new(pg, data).get
+
+MedalsMod::Discourse.new(pg, mapped).push
