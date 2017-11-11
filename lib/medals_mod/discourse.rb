@@ -6,52 +6,45 @@ module MedalsMod
     end
 
     def push
-      @data.each do |i|
-        # update post_actions table
-        @con.exec "INSERT INTO post_actions (post_id, user_id, post_action_type_id, created_at, updated_at, staff_took_action, targets_topic) VALUES('#{i[0]}', '#{i[2]}', '2', '#{i[5]}', '#{i[5]}', 'f', 'f')"
+      medals, users = @data
+      map = {}
 
-        # update posts table
-        post_calculator = ThanksMod::PostCalculator.new(@con, i[0], i[1], i[3])
-        like_count = post_calculator.like_count
-        like_score = post_calculator.like_score
-        score = post_calculator.score(like_score)
-        @con.exec "UPDATE posts SET like_count='#{like_count}', like_score='#{like_score}', score='#{score}' WHERE id='#{i[0]}'"
-        post_num = @con.exec("SELECT post_number FROM posts WHERE id='#{i[0]}'")[0]['post_number']
-        @con.exec "UPDATE badge_posts SET like_count='#{like_count}', like_score='#{like_score}', score='#{score}' WHERE topic_id='#{i[3]}' AND post_number='#{post_num}'"
-        pr = post_calculator.percent_rank
-        @con.exec "UPDATE posts SET percent_rank='#{pr}' WHERE id='#{i[0]}'"
+      time = Time.now.strftime('%Y-%m-%dT%H:%M:%SZ')
+      grouping = @con.exec("SELECT id FROM badge_groupings WHERE name='Other'")[0]['id']
 
-        # update topic_users table
-        @con.exec "UPDATE topic_users SET liked='t' WHERE user_id='#{i[2]}' AND topic_id='#{i[3]}'"
+      medals.each do |medal|
+        name = group_name(medal[1])
+        count = count_user(medal[0], users)
+        # create a group and a medal, automatically grant medal to users in this group
+        @con.exec "INSERT INTO groups (name,created_at,updated_at,automatic,user_count,alias_level,automatic_membership_retroactive,primary_group,has_messages,public,allow_membership_requests,default_notification_level,visibility_level,visible,public_exit,public_admission,messageable_level,mentionable_level) VALUES('#{name}', '#{time}', '#{time}', 't', '#{count}', '0', 't', 'f', 'f', 'f', 'f', '3', '0', 't', 'f', 'f', '0', '0')"
+        group_id = @con.exec("SELECT id FROM groups WHERE name='#{name}'")[0]['id']
+        map[medal[0]] = group_id
 
-        # update topics table
-        topic_calculator = ThanksMod::TopicCalculator.new(@con, i[3])
-        topic_likes = topic_calculator.like_count
-        topic_score = topic_calculator.score
-        @con.exec "UPDATE topics SET like_count='#{topic_likes}',score='#{topic_score}' WHERE id='#{i[3]}'"
-        topic_pr = topic_calculator.percent_rank
-        @con.exec "UPDATE topics SET percent_rank='#{topic_pr}' WHERE id='#{i[3]}'"
-
-        # update top_topics table
-        top_calculator = ThanksMod::TopCalculator.new(@con, i[3])
-        op_likes = top_calculator.op_like_count
-        scores = top_calculator.scores
-        @con.exec "UPDATE top_topics SET yearly_likes_count='#{topic_likes}',monthly_likes_count='#{topic_likes}',weekly_likes_count='#{topic_likes}',daily_likes_count='#{topic_likes}',quarterly_likes_count='#{topic_likes}' WHERE topic_id='#{i[3]}'"
-        @con.exec "UPDATE top_topics SET yearly_op_likes_count='#{op_likes}',monthly_op_likes_count='#{op_likes}',weekly_op_likes_count='#{op_likes}',daily_op_likes_count='#{op_likes}',quarterly_op_likes_count='#{op_likes}' WHERE topic_id='#{i[3]}'" 
-        @con.exec "UPDATE top_topics SET daily_score='#{scores[0]}',weekly_score='#{scores[1]}',monthly_score='#{scores[2]}',quarterly_score='#{scores[3]}',yearly_score='#{scores[4]}',all_score='#{scores[5]}' WHERE topic_id='#{i[3]}'"
-
-        # update user_actions table
-        @con.exec "INSERT INTO user_actions (action_type, user_id, target_topic_id, target_post_id, acting_user_id, created_at, updated_at) VALUES ('1', '#{i[2]}', '#{i[3]}', '#{i[0]}', '#{i[2]}', '#{i[5]}', '#{i[5]}')"
-        @con.exec "INSERT INTO user_actions (action_type, user_id, target_topic_id, target_post_id, acting_user_id, created_at, updated_at) VALUES ('2', '#{i[1]}', '#{i[3]}', '#{i[0]}', '#{i[2]}', '#{i[5]}', '#{i[5]}')"
-
-        # update directory_item table
-        @con.exec "UPDATE directory_items SET likes_given=likes_given + 1 WHERE user_id='#{i[2]}'"
-        @con.exec "UPDATE directory_items SET likes_received=likes_received + 1 WHERE user_id='#{i[1]}'"
-
-        # update user_stats table
-        @con.exec "UPDATE user_stats SET likes_given=likes_given + 1 WHERE user_id='#{i[2]}'"
-        @con.exec "UPDATE user_stats SET likes_received=likes_received + 1 WHERE user_id='#{i[1]}'"
+        @con.exec "INSERT INTO badges (name,description,badge_type_id,grant_count,created_at,updated_at,allow_title,multiple_grant,icon,listable,target_posts,query,enabled,auto_revoke,badge_grouping_id,trigger,show_posts,system) VALUES('#{medal[1]}', '#{medal[2]}', '1', '#{count}', '#{time}', '#{time}', 'f', 'f', 'fa-certificate', 't', 'f', '#{get_query(group_id)}', 't', 't', '#{grouping}', '0', 'f', 't')"
       end
+
+      users.each do |user|
+        group = map[user[0]]
+        @con.exec "INSERT INTO group_users (group_id,user_id,created_at,updated_at,owner,notification_level) VALUES('#{group}', '#{user[1]}', '#{time}', '#{time}', 'f', '3')"      
+      end
+    end
+
+    private
+
+    def group_name(name)
+      name.gsub(/\s+/, '_').downcase
+    end
+
+    def count_user(id, users)
+      count = 0
+      users.each do |u|
+        count += 1 if u[0] == id
+      end
+      count
+    end
+
+    def get_query(id)
+      "select user_id, created_at granted_at, NULL post_id from group_users where group_id='#{id}'"
     end
   end
 end
