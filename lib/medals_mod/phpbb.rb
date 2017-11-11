@@ -1,30 +1,47 @@
 module MedalsMod
-  # extract thanks from phpbb3 mysql database
+  # extract medals and granted users from phpbb3 mysql database
   class PHPBB
     def initialize(con)
       @con = con
     end
 
     def get
-      read_data_from_thanks_table
+      users = read_users
+      medals = strip_medals(read_medals, users)
+      [medals, users]
     end
 
     private
 
-    def read_data_from_thanks_table
-      thanks_data = @con.query("SELECT * FROM phpbb_thanks")
-      data = []
-      thanks_data.each do |row|
-        # post_id, poster_id, user_id, topic_id, forum_id, thanks_time
-        # 4936, 2, 280, 591, 19, 1366386854
-        thanks_time = get_thanks_time(row['thanks_time'])
-        data << [row['post_id'], row['poster_id'], row['user_id'], thanks_time]
+    def strip_medals(medals, users)
+      # strip ungranted medals
+      granted = []
+      stripped = []
+      users.each do |u|
+        granted << u[0] unless granted.include?(u[0])
       end
-      data
+      medals.each do |medal|
+        stripped << medal if granted.include?(medal[0])
+      end
+      stripped
     end
 
-    def get_thanks_time(str)
-      Time.at(str.to_i).strftime('%Y-%m-%dT%H:%M:%SZ')
+    def read_medals
+      raw = @con.query("SELECT id,name,description FROM phpbb_medals")
+      medals = []
+      raw.each do |r|
+        medals << [r['id'], r['name'], r['description']]
+      end
+      medals
+    end
+
+    def read_users
+      raw = @con.query("SELECT medal_id,user_id FROM phpbb_medals_awarded")
+      users = []
+      raw.each do |r|
+        users << [r['medal_id'], r['user_id']]
+      end
+      users
     end
   end
 end

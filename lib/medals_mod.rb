@@ -1,5 +1,6 @@
 require 'medals_mod/version.rb'
 require 'medals_mod/config.rb'
 require 'medals_mod/db.rb'
+require 'medals_mod/map.rb'
 require 'medals_mod/phpbb.rb'
 require 'medals_mod/discourse.rb'

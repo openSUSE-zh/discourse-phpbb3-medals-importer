@@ -5,7 +5,7 @@ module MedalsMod
   # return a database connection
   class DB
     def initialize(config)
-      @config = ThanksMod::Config.new(config).hash
+      @config = MedalsMod::Config.new(config).hash
     end
 
     def respond_to_missing?(dbtype)
