@@ -10,7 +10,7 @@ module MedalsMod
       map = {}
 
       time = Time.now.strftime('%Y-%m-%dT%H:%M:%SZ')
-      grouping = @con.exec("SELECT id FROM badge_groupings WHERE name='Other'")[0]['id']
+      grouping = '5' # 'Other' group
 
       medals.each do |medal|
         name = group_name(medal[1])
