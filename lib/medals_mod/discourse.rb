@@ -10,7 +10,12 @@ module MedalsMod
       map = {}
 
       time = Time.now.strftime('%Y-%m-%dT%H:%M:%SZ')
-      grouping = '5' # 'Other' group
+      # the "Community" group
+      # should not use "Other" group, because
+      # if the id of the badge is below 100,
+      # its badge_grouping_id will be set to -1
+      # if the previous one was "5" when migrating
+      grouping = '2'
 
       medals.each do |medal|
         name = group_name(medal[1])
